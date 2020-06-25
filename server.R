@@ -9,7 +9,8 @@ shinyServer(function(input, output, session) {
   pitchers <- read.csv("Data/FanGraphs-Pitchers.csv",stringsAsFactors = F); colnames(pitchers)[1] <- "Name"
   hitters <- read.csv("Data/FanGraphs-Hitters.csv",stringsAsFactors = F); colnames(hitters)[1] <- "Name"
   #accessed from: http://crunchtimebaseball.com/baseball_map.html
-  master <- read.csv("Data/master.csv",stringsAsFactors = F)
+  download.file("http://crunchtimebaseball.com/master.csv",destfile="Data/baseball_map.csv",method="libcurl")
+  master <- read.csv("Data/baseball_map.csv",stringsAsFactors = F)
   
   draftFile <- "Data/FFDraftData.RData"
   #draftId <- 340916602432159744 #338482281133907968 #340196925133344768 #340208591887724544
