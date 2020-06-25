@@ -29,6 +29,15 @@ shinyUI(
                       h2("Pitchers Available"),
                       DT::dataTableOutput("dataAvailPitchers"),
                       h2("All Available"),
-                      DT::dataTableOutput("dataAvailALL"))
+                      DT::dataTableOutput("dataAvailALL")),
+             tabPanel("Settings",
+                      h2("Draft Settings"),
+                      textInput("userName","Fantrax Username", value = userName),
+                      passwordInput("passWord","Fantrax Password", value = passWord),
+                      textInput("leagueId","Fantrax League Id", value = leagueId),
+                      selectizeInput("myTeam","Select My Team",choices=teams,selected=MyTeam),
+                      actionButton("saveSettings","Save Settings")
+                      )
+
   )
 )

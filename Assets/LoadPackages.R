@@ -1,6 +1,7 @@
 library(rhandsontable)
 library(DT)
 library(rjson)
+library(DescTools)
 
 library(XML)
 library(dplyr)

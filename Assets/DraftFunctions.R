@@ -14,13 +14,14 @@ gLatestFile <- function(sourceDir,fPattern,wildcard=TRUE){
 }
 
 ## Fantrax Functions ####
-getFantraxDraftData <- function(username,password){#leagueId='nc30j3mnjsuzwnaa' #leagueId='1tpc1071kbu8rp1e'
+getFantraxDraftData <- function(username,password,leagueId,fantraxDraftFile,download_location){
+  #leagueId='nc30j3mnjsuzwnaa' #leagueId='1tpc1071kbu8rp1e'
   #loginUrl <- paste0("https://www.fantrax.com/login?showSignup=false&url=%2Fnewui%2Ffantasy%2FdraftResultsPopup.go%3FleagueId%3D",leagueId,"%26sxq_w%3D2")
   loginUrl <- paste0("https://www.fantrax.com/login")
   webUrl <- paste0("https://www.fantrax.com/newui/fantasy/draftResults.go?leagueId=",leagueId,"&csvDownload=true&csvDownload")
   
   #Get available chrome drivers binman::list_versions("chromedriver")
-  driver <- rsDriver(browser=c("chrome"), chromever="83.0.4103.39")
+  driver <- rsDriver(browser=c("chrome"), chromever="83.0.4103.39", port = 4444L)
   
   remote_driver <- driver[["client"]]
   remote_driver$open()
@@ -41,12 +42,9 @@ getFantraxDraftData <- function(username,password){#leagueId='nc30j3mnjsuzwnaa' 
   downloadCSV <- remote_driver$findElement(using = 'class', value = 'defaultLink')
   downloadCSV$clickElement()
   
-  filename <- "FantraxDraftResults"
-  download_location <- file.path(Sys.getenv("USERPROFILE"), "Downloads")
+  latestFile <- gLatestFile(download_location,fantraxDraftFile)
   
-  latestFile <- gLatestFile(download_location,filename)
-  
-  file.copy(file.path(download_location, latestFile), paste0("Data/",filename,".csv"))
+  file.copy(file.path(download_location, latestFile), paste0("Data/",fantraxDraftFile,".csv"))
   
   remote_driver$close()
   driver$server$stop()
@@ -54,6 +52,11 @@ getFantraxDraftData <- function(username,password){#leagueId='nc30j3mnjsuzwnaa' 
   
   draftData <- read.csv(paste0("Data/",filename,".csv"))
   return(draftData)
+}
+
+loadData <- function(filename){
+  dData <- read.csv(paste0("Data/",filename,".csv"))
+  return(dData)
 }
 
 updateDraftFromFantrax <- function(leagueId,draftResults){#leagueId='nc30j3mnjsuzwnaa' #leagueId='1tpc1071kbu8rp1e'

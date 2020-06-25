@@ -1,26 +1,4 @@
-source("Assets/LoadPackages.R")
-source("Assets/DraftFunctions.R")
-
 shinyServer(function(input, output, session) {
-  
-  #fffile <- "C:/Users/rmiles/Downloads/ffa_customrankings2017-3.csv"
-  #accessed from:  https://www.fangraphs.com/projections.aspx?pos=all&stats=bat&type=fangraphsdc
-  pitchers <- read.csv("Data/FanGraphs-Pitchers.csv",stringsAsFactors = F); colnames(pitchers)[1] <- "Name"
-  hitters <- read.csv("Data/FanGraphs-Hitters.csv",stringsAsFactors = F); colnames(hitters)[1] <- "Name"
-  #accessed from: http://crunchtimebaseball.com/baseball_map.html
-  masterFileURL <- "http://crunchtimebaseball.com/master.csv"
-  masterFile <- "Data/baseball_map.csv"
-  masterFile.ModifiedDate <- as.Date(file.info(masterFile)$mtime)
-  if(Sys.Date()-masterFile.ModifiedDate > 2){
-    download.file(masterFileURL,destfile=masterFile,method="libcurl")
-  }
-  master <- read.csv(masterFile,stringsAsFactors = F)
-  
-  draftFile <- "Data/FFDraftData.RData"
-  teams <- c('Sweeney','Cusick','Joel','Inman','Nate','Jackson','Heun','Liechty','Miles')
-  MyTeam <- 'Miles'
-  rosterPositions <- c('C-1','1B-1','2B-1','3B-1','SS-1','OF-1','OF-2','OF-3','SP-1','SP-2','RP-1','RP-2','P-1','BE-1','BE-2','BE-3')
-  
   qProbs <- c(0,.4,.6,.8,.9,.95,.98,1)
   
   hitterStats <- c('HR','RBI','SB','AVG','R','SO','OBP','SLG'); hDesc <- c('SO')
@@ -82,6 +60,7 @@ shinyServer(function(input, output, session) {
   
   master1 <- master[,grep('mlb|bats|throws|birth_year|pos|fg',colnames(master))]
   master1$age <- lubridate::year(Sys.Date()) - master1$birth_year
+  
   players <- rbind(hitters[,c('Name','Team','WAR','ADP','points','playerid')],pitchers[,c('Name','Team','WAR','ADP','points','playerid')])
   players <- merge(players,master1,by.x='playerid',by.y='fg_id')
   players <- players[order(players$ADP),]
@@ -203,7 +182,7 @@ shinyServer(function(input, output, session) {
     values$dForecast <- forecastDraft(draftResults,ff)
     draftForecast <- values$dForecast
     
-    rotoAll <- rotoTable_Total(values$dForecast, hitters, pitchers, hitterStats, pitcherStats)
+    rotoAll <- rotoTable_Total(draftForecast, hitters, pitchers, hitterStats, pitcherStats)
     values$rotoRank <- rotoTable_Rank(rotoAll, pStats = c(hitterStats,pitcherStats))
     values$rotoTotal <- plyr::join(values$rotoRank[,c('Team','Total')],rotoAll)
       
