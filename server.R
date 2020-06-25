@@ -2,21 +2,16 @@ library(rhandsontable)
 library(DT)
 library(rjson)
 
-source("C:/Users/rmiles/Documents/School/R/snlLoadPackages.R")
-source("C:/Users/rmiles/Documents/School/R/snlFunctions.R")
-source("C:/Users/rmiles/Documents/School/R/snlCharts.R")
-source("C:/Users/rmiles/Documents/School/R/MiningModelClass.R")
-
 shinyServer(function(input, output, session) {
   
   #fffile <- "C:/Users/rmiles/Downloads/ffa_customrankings2017-3.csv"
   #accessed from:  https://www.fangraphs.com/projections.aspx?pos=all&stats=bat&type=fangraphsdc
-  pitchers <- read.csv("C:/Users/rmiles/Downloads/FanGraphs-Pitchers.csv",stringsAsFactors = F); colnames(pitchers)[1] <- "Name"
-  hitters <- read.csv("C:/Users/rmiles/Downloads/FanGraphs-Hitters.csv",stringsAsFactors = F); colnames(hitters)[1] <- "Name"
+  pitchers <- read.csv("Data/FanGraphs-Pitchers.csv",stringsAsFactors = F); colnames(pitchers)[1] <- "Name"
+  hitters <- read.csv("Data/FanGraphs-Hitters.csv",stringsAsFactors = F); colnames(hitters)[1] <- "Name"
   #accessed from: http://crunchtimebaseball.com/baseball_map.html
-  master <- read.csv("C:/Users/rmiles/Downloads/master.csv",stringsAsFactors = F)
+  master <- read.csv("Data/master.csv",stringsAsFactors = F)
   
-  draftFile <- "C:/Users/rmiles/Documents/School/R/FantasyBaseball/FFDraftData.RData"
+  draftFile <- "Data/FFDraftData.RData"
   #draftId <- 340916602432159744 #338482281133907968 #340196925133344768 #340208591887724544
   #teams <- c('Harvey','Leo','Eric','Ryan','Forrest','Sue','Emily','Julianne','Deb','Dom')
   #teams <- c('Ben','James','Nannah','Nick','Higgins','Cliff','Joel','Nate','Inman','Miles','Cusick','Aaron')
