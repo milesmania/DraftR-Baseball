@@ -1,6 +1,4 @@
-library(rhandsontable)
-library(DT)
-library(rjson)
+source("Assets/LoadPackages.R")
 
 shinyServer(function(input, output, session) {
   
@@ -9,13 +7,15 @@ shinyServer(function(input, output, session) {
   pitchers <- read.csv("Data/FanGraphs-Pitchers.csv",stringsAsFactors = F); colnames(pitchers)[1] <- "Name"
   hitters <- read.csv("Data/FanGraphs-Hitters.csv",stringsAsFactors = F); colnames(hitters)[1] <- "Name"
   #accessed from: http://crunchtimebaseball.com/baseball_map.html
-  download.file("http://crunchtimebaseball.com/master.csv",destfile="Data/baseball_map.csv",method="libcurl")
-  master <- read.csv("Data/baseball_map.csv",stringsAsFactors = F)
+  masterFileURL <- "http://crunchtimebaseball.com/master.csv"
+  masterFile <- "Data/baseball_map.csv"
+  masterFile.ModifiedDate <- as.Date(file.info(masterFile)$mtime)
+  if(Sys.Date()-masterFile.ModifiedDate > 2){
+    download.file(masterFileURL,destfile=masterFile,method="libcurl")
+  }
+  master <- read.csv(masterFile,stringsAsFactors = F)
   
   draftFile <- "Data/FFDraftData.RData"
-  #draftId <- 340916602432159744 #338482281133907968 #340196925133344768 #340208591887724544
-  #teams <- c('Harvey','Leo','Eric','Ryan','Forrest','Sue','Emily','Julianne','Deb','Dom')
-  #teams <- c('Ben','James','Nannah','Nick','Higgins','Cliff','Joel','Nate','Inman','Miles','Cusick','Aaron')
   teams <- c('Sweeney','Cusick','Joel','Inman','Nate','Jackson','Heun','Liechty','Miles')
   MyTeam <- 'Miles'
   rosterPositions <- c('C-1','1B-1','2B-1','3B-1','SS-1','OF-1','OF-2','OF-3','SP-1','SP-2','RP-1','RP-2','P-1','BE-1','BE-2','BE-3')
@@ -194,7 +194,7 @@ shinyServer(function(input, output, session) {
     #update draft results
     for(x in 1:nRounds){#x=1
       for(t in 1:length(teams)){#t=1
-        pick <- index(draftResults)[draftResults$Round == x & draftResults$Team == teams[t]]
+        pick <- which(draftResults$Round == x & draftResults$Team == teams[t])
         draftResults[pick, 'Pick'] <- as.character(dfDraft[x,t])
       }
     }
@@ -485,9 +485,45 @@ rotoTable_Rank <- function(pTotal, pStats, pAvg = c('AVG','OBP','SLG','ERA','WHI
   return(pRank)
 }
 
-updateDraftFromFantrax <- function(draftId,draftResults){#draftId='nc30j3mnjsuzwnaa'
-  webUrl <- paste0("https://www.fantrax.com/newui/fantasy/draftResultsPopup.go?leagueId=",draftId)
+updateDraftFromFantrax <- function(leagueId,draftResults){#leagueId='nc30j3mnjsuzwnaa' #leagueId='1tpc1071kbu8rp1e'
+  webUrl <- paste0("https://www.fantrax.com/newui/fantasy/draftResultsPopup.go?leagueId=",leagueId)
   webpage <- read_html(webUrl)
+  write_html(webpage,"Assets/TestDraftScreen.html")
+}
+
+loginFantrax <- function(leagueId,draftResults){#leagueId='nc30j3mnjsuzwnaa' #leagueId='1tpc1071kbu8rp1e'
+  #loginUrl <- paste0("https://www.fantrax.com/login?showSignup=false&url=%2Fnewui%2Ffantasy%2FdraftResultsPopup.go%3FleagueId%3D",leagueId,"%26sxq_w%3D2")
+  loginUrl <- paste0("https://www.fantrax.com/login")
+  fTsession <-read_html(loginUrl)
+  fTsession %>% html_node("form")
+  fTform<-html_form(fTsession)[[2]]  #in this case the submit is the 2nd form
+  filled_form<-set_values(fTform, email="*****", password="*****")
+  submit_form(fTsession, filled_form)
+  webpage <- read_html(webUrl)
+  write_html(fTsession,"Assets/TestLoginScreen.html")
+  library(httr)
+  handle <- handle("https://www.fantrax.com") 
+  path   <- "login"
   
+  # fields found in the login form.
+  login <- list(
+    amember_login = "username"
+    ,amember_pass  = "password"
+    ,amember_redirect_url = webUrl
+  )
+  
+  response <- POST(handle = handle, path = path, body = login)
+  webpage <- content(response)
+  write_html(webpage,"Assets/TestLoginScreen.html")
+  
+  library(RSelenium)
+  
+  driver <- rsDriver(port = 4444L)
+  remote_driver <- driver[["client"]]
+  remote_driver$open()
+  
+  remote_driver$navigate(loginUrl)
+  driver$server$stop()
+  system("taskkill /im java.exe /f", intern=FALSE, ignore.stdout=FALSE)
 }
 
