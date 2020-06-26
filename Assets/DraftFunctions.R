@@ -103,7 +103,7 @@ forecastDraft <- function(draftResults,ff){
   rForecast <- draftResults$Selected!="selected"
   dFF <- ff[!(ff$pId %in% draftResults[!rForecast,'Pick']),]
   if(any(rForecast)){
-    for(rF in draftResults[rForecast,'Overall']){#rF=101
+    for(rF in draftResults[rForecast,'Overall']){#rF=106
       dTeam <- draftResults[rF,'Team']
       dPlayers <- subset(draftResults,Pick!="" & Team == dTeam,Pick)
       dPos <- sapply(strsplit(dPlayers$Pick, split='|', fixed=TRUE), `[`, 3)
@@ -192,7 +192,7 @@ setRoster <- function(draftedPlayers,showForecast=TRUE,
   }
   return(rosters)
 }
-#dResult <- setDraftResult(dfDraft,draftForecast)
+#dResult <- setDraftResult(dfDraft,dFCast=draftForecast)
 setDraftResult <- function(dfDraft,dFCast){
   dTable <- matrix(data=character(),nrow=nrow(dfDraft),ncol=ncol(dfDraft))
   colnames(dTable) <- colnames(dfDraft)

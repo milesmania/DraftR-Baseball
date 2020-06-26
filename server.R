@@ -66,6 +66,13 @@ shinyServer(function(input, output, session) {
   players <- players[order(players$ADP),]
   
   ff <- players[,c('playerid','Name','mlb_team','ottoneu_pos','WAR','ADP','points','bats','throws','age')]
+  ff_anyDups <- which(duplicated(ff$playerid))
+  if(length(ff_anyDups>0)){
+    ff_checkDups <- ff[ff_anyDups,"playerid"]
+    ff_keep <- c(ff_anyDups,which(!(ff$playerid %in% ff_checkDups)))
+    ff_keep <- ff_keep[order(ff_keep)]
+    ff <- ff[ff_keep,]
+  }
   
   colnames(ff)[1:4] <- c("id", "name","team","pos")
   
