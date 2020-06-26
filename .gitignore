@@ -5,6 +5,7 @@
 # Session Data files
 .RData
 Data/*.RData
+Assets/config*
 
 # User-specific files
 .Ruserdata
