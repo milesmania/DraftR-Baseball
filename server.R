@@ -312,7 +312,7 @@ shinyServer(function(input, output, session) {
   output$draftForecasted = renderTable({setDraftResult(dfDraft, values$dForecast)}, rownames = TRUE, striped = TRUE, width = "100%")
   
   output$draftData = DT::renderDataTable({
-    datatable(values$dForecast, rownames = FALSE, options = list(lengthMenu = c(100, 50, 25, 10),
+    datatable(values$dForecast, options = list(lengthMenu = c(100, 50, 25, 10),
                                              columnDefs = list(list(visible = FALSE, targets = 5:ncol(values$dForecast))), 
                                              pageLength = 50)) %>%
       formatStyle(valueColumns="Selected",target = 'cell',columns = "Pick",color = styleEqual(levels="forecast",values="lightblue"))
