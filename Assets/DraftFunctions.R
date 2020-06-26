@@ -14,7 +14,7 @@ gLatestFile <- function(sourceDir,fPattern,wildcard=TRUE){
 }
 
 ## Fantrax Functions ####
-getFantraxDraftData <- function(username,password,leagueId,fantraxDraftFile,download_location){
+getFantraxDraftData <- function(userName,passWord,leagueId,fantraxDraftFile,download_location){
   #leagueId='nc30j3mnjsuzwnaa' #leagueId='1tpc1071kbu8rp1e'
   #loginUrl <- paste0("https://www.fantrax.com/login?showSignup=false&url=%2Fnewui%2Ffantasy%2FdraftResultsPopup.go%3FleagueId%3D",leagueId,"%26sxq_w%3D2")
   loginUrl <- paste0("https://www.fantrax.com/login")
@@ -23,47 +23,68 @@ getFantraxDraftData <- function(username,password,leagueId,fantraxDraftFile,down
   #Get available chrome drivers binman::list_versions("chromedriver")
   driver <- rsDriver(browser=c("chrome"), chromever="83.0.4103.39", port = 4444L)
   
-  remote_driver <- driver[["client"]]
-  remote_driver$open()
+  remote_driver <- driver[["client"]] #remote_driver$open()
   
   remote_driver$navigate(loginUrl)
+  
+  Sys.sleep(2)
   
   textfield_Username <- remote_driver$findElement(using = 'id', value = 'mat-input-0')
   textfield_PW <- remote_driver$findElement(using = 'id', value = 'mat-input-1')
   login_button <- remote_driver$findElement(using = 'class', value = 'mat-primary')
   
-  textfield_Username$sendKeysToElement(list(username))
-  textfield_PW$sendKeysToElement(list(password))
+  textfield_Username$sendKeysToElement(list(userName))
+  textfield_PW$sendKeysToElement(list(passWord, key = 'enter'))
+  #login_button$clickElement()
   
-  login_button$clickElement()
+  Sys.sleep(2)
   
   remote_driver$navigate(webUrl)
   
-  downloadCSV <- remote_driver$findElement(using = 'class', value = 'defaultLink')
-  downloadCSV$clickElement()
+  Sys.sleep(2)
+  
+  # downloadCSV <- remote_driver$findElement(using = 'class', value = 'defaultLink')
+  # downloadCSV$clickElement()
   
   latestFile <- gLatestFile(download_location,fantraxDraftFile)
   
-  file.copy(file.path(download_location, latestFile), paste0("Data/",fantraxDraftFile,".csv"))
+  file.copy(file.path(download_location, latestFile), paste0("Data/",fantraxDraftFile,".csv"), overwrite = TRUE)
   
   remote_driver$close()
   driver$server$stop()
   system("taskkill /im java.exe /f", intern=FALSE, ignore.stdout=FALSE)
   
-  draftData <- read.csv(paste0("Data/",filename,".csv"))
+  draftData <- read.csv(paste0("Data/",fantraxDraftFile,".csv"), stringsAsFactors = FALSE)
   return(draftData)
 }
 
 loadData <- function(filename){
-  dData <- read.csv(paste0("Data/",filename,".csv"))
+  dData <- read.csv(paste0("Data/",filename,".csv"), stringsAsFactors = FALSE)
   return(dData)
 }
 
-updateDraftFromFantrax <- function(leagueId,draftResults){#leagueId='nc30j3mnjsuzwnaa' #leagueId='1tpc1071kbu8rp1e'
-  webUrl <- paste0("https://www.fantrax.com/newui/fantasy/draftResults.go?leagueId=",leagueId,"&csvDownload=true&csvDownload")
-  webpage <- read_html(webUrl)
-  write_html(webpage,"Assets/TestDraftScreen.html")
+updateDraftFromFantrax <- function(draftResults,username,password,leagueId,fantraxDraftFile,download_location){#leagueId='nc30j3mnjsuzwnaa' #leagueId='1tpc1071kbu8rp1e'
+  fantraxDraftData <- getFantraxDraftData(username,password,leagueId,fantraxDraftFile,download_location)
+  #fantraxDraftData <- read.csv(paste0("Data/",fantraxDraftFile,".csv"), stringsAsFactors = FALSE)
+  fantraxDraftData <- fantraxDraftData[!is.na(fantraxDraftData$Player),]
+  if(nrow(fantraxDraftData) == 0) return(fantraxDraftData)
+  fantraxDraftData$pId <- sapply(1:nrow(fantraxDraftData),function(x){
+    fD <- fantraxDraftData[x,]
+    paste(fD[,c('Player','Team','Pos')],collapse = "|")
+  })
+  unpicked <- draftResults[draftResults$Pick=="","Overall"]
+  slPicked <- fantraxDraftData$Ov.Pick
+  picksToFill <- slPicked[slPicked %in% unpicked]
+  pickstoUpdate <- fantraxDraftData[fantraxDraftData$Ov.Pick %in% picksToFill,c('Round','Fantasy.Team','pId')]
+  return(pickstoUpdate)
 }
+
+getTeamsFantrax <- function(fantraxDraftFile){
+  fD <- loadData(fantraxDraftFile)
+  fTeams <-  unique(fD$Fantasy.Team)
+  return(fTeams)
+}
+
 
 ## User Functions ###########################################
 
@@ -115,7 +136,7 @@ forecastDraft <- function(draftResults,ff){
   return(draftResults)
 }
 
-draftChart <- function(dForcast){
+draftChart <- function(dForcast){#dForcast=draftForecast
   draftPoints <- dForcast %>%
     group_by(Team) %>%
     summarise(actual = sum(points[Selected=="selected"]),
@@ -178,6 +199,15 @@ setDraftResult <- function(dfDraft,dFCast){
   return(dTable)
 }
 
+draftPopulate <- function(picksToUpdate,dfDraft){
+  if(nrow(picksToUpdate) > 0){
+    for(dD in 1:nrow(picksToUpdate)){#dD=1
+      dPick <- picksToUpdate[dD,]
+      dfDraft[dPick$round,dPick$draft_slot] <- dPick$pId
+    }
+  }
+  return(dfDraft)
+}
 
 rotoTable_Total <- function(draftForecast, hitters, pitchers, hitterStats, pitcherStats){
   hAvg <- c('AVG','OBP','SLG')

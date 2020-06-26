@@ -184,7 +184,7 @@ shinyServer(function(input, output, session) {
     
     rotoAll <- rotoTable_Total(draftForecast, hitters, pitchers, hitterStats, pitcherStats)
     values$rotoRank <- rotoTable_Rank(rotoAll, pStats = c(hitterStats,pitcherStats))
-    values$rotoTotal <- plyr::join(values$rotoRank[,c('Team','Total')],rotoAll)
+    values$rotoTotal <- plyr::join(values$rotoRank[,c('Team','Total')],rotoAll,by='Team')
       
     rosters <- setRoster(draftForecast,showForecast=input$chartShowForecastedRoster)
     values$rosterData <- rosters
@@ -198,13 +198,17 @@ shinyServer(function(input, output, session) {
     save(dfDraft,teams,playersAvail,pitchers,hitters,rosters,availPlayers,playersTaken,draftResults,draftForecast,rotoTotal,rotoRank,playersTakenCount,StartPickTime, file = draftFile)
   })
   
+  ## Refresh Draft Button ####
   observeEvent(input$RefreshDraft,{
-    picksToUpdate <- updateDraftFromSleeper(draftId,values$dResult)
+    withProgress(message = 'Updating Draft from Fantrax', value = 0, {
+      incProgress(0.5,paste('Loading Fantrax Draft ...'))
+      picksToUpdate <- updateDraftFromFantrax(values$dResult,userName,passWord,leagueId,fantraxDraftFile,download_location)
+    })
     if(nrow(picksToUpdate) > 0){
       dfDraft <- values$data
       for(dD in 1:nrow(picksToUpdate)){
         dPick <- picksToUpdate[dD,]
-        dfDraft[dPick$round,dPick$draft_slot] <- dPick$pId
+        dfDraft[dPick$Round,dPick$Fantasy.Team] <- dPick$pId
       }
       values$data <- dfDraft
     }
@@ -220,7 +224,7 @@ shinyServer(function(input, output, session) {
   
   output$dataAvail = DT::renderDataTable({
     draftForecast <- values$dForecast
-    dtF <- datatable(values$dataAvail[,c('name','pos','team','age','ADP','points')], 
+    dtF <- datatable(values$dataAvail[,c('name','pos','team','age','ADP','points')], rownames = FALSE,
               options = list(lengthMenu = c(100, 50, 25, 10), pageLength = 50)) %>%
       formatStyle("pos",target = 'row',
                   backgroundColor = styleEqual(levels=c("SP","RP","OF","C","1B","SS"),
@@ -235,7 +239,7 @@ shinyServer(function(input, output, session) {
     })
   
   output$dataAvailALL = DT::renderDataTable({
-    datatable(values$dataAvail, options = list(lengthMenu = c(100, 50, 25, 10), pageLength = 25)) %>%
+    datatable(values$dataAvail, rownames = FALSE, options = list(lengthMenu = c(100, 50, 25, 10), pageLength = 25)) %>%
       formatStyle("pos",target = 'row',
                   backgroundColor = styleEqual(levels=c("SP","RP","OF","C","1B","SS"),
                                                values=c("pink","lightgreen","lightblue","orange","violet","lightgrey")))
@@ -243,7 +247,8 @@ shinyServer(function(input, output, session) {
   })
   
   output$dataAvailHitters = DT::renderDataTable({
-    datatable(values$availHitters, options = list(lengthMenu = c(100, 50, 25, 10), pageLength = 10, order=list(which(colnames(hitters)=='ADP'),'asc'))) %>%
+    datatable(values$availHitters, rownames = FALSE, 
+              options = list(lengthMenu = c(100, 50, 25, 10), pageLength = 10, order=list(which(colnames(hitters)=='ADP'),'asc'))) %>%
       formatStyle("pos",target = 'row',
                   backgroundColor = styleEqual(levels=c("2B","3B","OF","C","1B","SS"),
                                                values=c("pink","lightgreen","lightblue","orange","violet","lightgrey")))
@@ -251,7 +256,8 @@ shinyServer(function(input, output, session) {
   })
   
   output$dataAvailPitchers = DT::renderDataTable({
-    datatable(values$availPitchers, options = list(lengthMenu = c(100, 50, 25, 10), pageLength = 10, order=list(which(colnames(pitchers)=='ADP'),'asc'))) %>%
+    datatable(values$availPitchers, rownames = FALSE, 
+              options = list(lengthMenu = c(100, 50, 25, 10), pageLength = 10, order=list(which(colnames(pitchers)=='ADP'),'asc'))) %>%
       formatStyle("pos",target = 'row',
                   backgroundColor = styleEqual(levels=c("SP","RP","SP/RP"),
                                                values=c("pink","lightblue","lightgrey")))
@@ -282,7 +288,7 @@ shinyServer(function(input, output, session) {
   output$draftForecasted = renderTable({setDraftResult(dfDraft, values$dForecast)}, rownames = TRUE, striped = TRUE, width = "100%")
   
   output$draftData = DT::renderDataTable({
-    datatable(values$dForecast, options = list(lengthMenu = c(100, 50, 25, 10),
+    datatable(values$dForecast, rownames = FALSE, options = list(lengthMenu = c(100, 50, 25, 10),
                                              columnDefs = list(list(visible = FALSE, targets = 5:ncol(values$dForecast))), 
                                              pageLength = 50)) %>%
       formatStyle(valueColumns="Selected",target = 'cell',columns = "Pick",color = styleEqual(levels="forecast",values="lightblue"))

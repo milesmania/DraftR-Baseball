@@ -3,7 +3,10 @@ library(rhandsontable)
 shinyUI(
   navbarPage("Fantasy Baseball Discombobulator!!  (BETA)",
              tabPanel("Draft",htmlOutput("nextPick"),
-                      p(textOutput("pickTimeElapsed")),
+                      fluidRow(
+                        column(6,p(textOutput("pickTimeElapsed"))),
+                        column(3,offset = 3, actionButton("RefreshDraft","Refresh Draft"))
+                      ),
                       sidebarLayout(
                         sidebarPanel(
                           DT::dataTableOutput("dataAvail"),
