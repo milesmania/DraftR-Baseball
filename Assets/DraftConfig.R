@@ -1,4 +1,5 @@
 config <- setConfigTxt()
+stopifnot(userName!="[ENTER-USERNAME]",passWord!="[ENTER-PASSWORD]", leagueId!="[ENTER-LEAGUEID]", MyTeam!="[ENTER-MYTEAM]")
 
 teams <- getTeamsFantrax(fantraxDraftFile)
 
