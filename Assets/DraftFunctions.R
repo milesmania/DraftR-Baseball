@@ -85,6 +85,15 @@ getTeamsFantrax <- function(fantraxDraftFile){
   return(fTeams)
 }
 
+setConfigTxt <- function(configFile="Assets/config.txt"){
+  key.val<-read.table(configFile, sep="=", col.names=c("key","value"), as.is=c(1,2))
+  config <- key.val$value; names(config) <- key.val$key
+  for(kV in 1:length(config)){
+    assign(names(config)[kV],config[kV])
+  }
+  return(config)
+}
+
 
 ## User Functions ###########################################
 

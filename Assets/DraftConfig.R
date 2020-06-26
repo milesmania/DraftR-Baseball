@@ -1,3 +1,5 @@
+config <- setConfigTxt()
+
 userName <- "milesmania"
 passWord <- "7W8XAEsBIq#k2"
 leagueId <- '1tpc1071kbu8rp1e' #leagueId <- 'nc30j3mnjsuzwnaa'

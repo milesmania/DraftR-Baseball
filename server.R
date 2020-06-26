@@ -214,6 +214,23 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  ## Save Settings Button ####
+  observeEvent(input$saveSettings,{
+    withProgress(message = 'Saving Settings', value = 0, {
+      incProgress(0.5,paste('Saving Config Settings ...'))
+      userName <- input$userName
+      passWord <- input$passWord
+      leagueId <- input$leagueId
+      MyTeam <- input$myTeam
+      
+      config <- c('userName'=userName,'passWord'=passWord,'leagueId'=leagueId,'MyTeam'=MyTeam)
+      configTxt <- paste(sapply(1:length(config),function(x){paste(names(config[x]),config[x], sep = "=")}),
+                         collapse = "\n")
+      write(configTxt,file = "Assets/config.txt")
+      Sys.sleep(1)
+    })
+  })
+  
   ## Output updates ###########################################
   
   output$data = renderRHandsontable({

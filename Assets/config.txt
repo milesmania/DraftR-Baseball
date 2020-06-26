@@ -1,0 +1,4 @@
+userName=[ENTER-USERNAME]
+passWord=[ENTER-PASSWORD]
+leagueId=[ENTER-LEAGUEID]
+MyTeam=[ENTER-MYTEAM]
