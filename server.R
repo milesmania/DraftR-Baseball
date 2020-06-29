@@ -190,8 +190,12 @@ shinyServer(function(input, output, session) {
     draftForecast <- values$dForecast
     
     rotoAll <- rotoTable_Total(draftForecast, hitters, pitchers, hitterStats, pitcherStats)
-    values$rotoRank <- rotoTable_Rank(rotoAll, pStats = c(hitterStats,pitcherStats))
-    values$rotoTotal <- plyr::join(values$rotoRank[,c('Team','Total')],rotoAll,by='Team')
+    if(nrow(rotoAll)>0){
+      rotoRank <- rotoTable_Rank(rotoAll, pStats = c(hitterStats,pitcherStats))
+      values$rotoRank <- rotoRank
+      rotoTotal <- plyr::join(values$rotoRank[,c('Team','Total')],rotoAll,by='Team')
+      values$rotoTotal <- rotoTotal
+    }
       
     rosters <- setRoster(draftForecast,showForecast=input$chartShowForecastedRoster)
     values$rosterData <- rosters

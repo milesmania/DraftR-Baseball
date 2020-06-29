@@ -1,7 +1,9 @@
 
 ## Get Player Data ####
+download_location <- file.path(Sys.getenv("USERPROFILE"), "Downloads")
 
 #accessed from:  https://www.fangraphs.com/projections.aspx?pos=all&stats=bat&type=fangraphsdc
+getFangraphData(download_location)
 pitchers <- read.csv("Data/FanGraphs-Pitchers.csv",stringsAsFactors = F); colnames(pitchers)[1] <- "Name"
 hitters <- read.csv("Data/FanGraphs-Hitters.csv",stringsAsFactors = F); colnames(hitters)[1] <- "Name"
 
@@ -19,6 +21,5 @@ master <- read.csv(masterFile,stringsAsFactors = F)
 draftFile <- "Data/FFDraftData.RData"
 
 fantraxDraftFile <- "FantraxDraftResults"
-download_location <- file.path(Sys.getenv("USERPROFILE"), "Downloads")
 
 draftData <- loadData(fantraxDraftFile)

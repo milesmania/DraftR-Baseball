@@ -20,6 +20,7 @@ getFantraxDraftData <- function(userName,passWord,leagueId,fantraxDraftFile,down
   loginUrl <- paste0("https://www.fantrax.com/login")
   webUrl <- paste0("https://www.fantrax.com/newui/fantasy/draftResults.go?leagueId=",leagueId,"&csvDownload=true&csvDownload")
   
+  download_location <- file.path(Sys.getenv("USERPROFILE"), "Downloads")
   #Get available chrome drivers binman::list_versions("chromedriver")
   driver <- rsDriver(browser=c("chrome"), chromever="83.0.4103.39", port = 4444L)
   
@@ -56,6 +57,47 @@ getFantraxDraftData <- function(userName,passWord,leagueId,fantraxDraftFile,down
   
   draftData <- read.csv(paste0("Data/",fantraxDraftFile,".csv"), stringsAsFactors = FALSE)
   return(draftData)
+}
+
+getFangraphData <- function(download_location){
+  hitterURL <- "https://www.fangraphs.com/projections.aspx?pos=all&stats=bat&type=fangraphsdc&team=0&lg=all&players=0"
+  pitcherURL <- "https://www.fangraphs.com/projections.aspx?pos=all&stats=pit&type=fangraphsdc&team=0&lg=all&players=0"
+  
+  hitterFile <- "Data/FanGraphs-Hitters.csv"
+  pitcherFile <- "Data/FanGraphs-Pitchers.csv"
+  fangraphFile <- "FanGraphs Leaderboard"
+  
+  hitterFile.ModifiedDate <- as.Date(file.info(hitterFile)$mtime)
+  if(Sys.Date()-hitterFile.ModifiedDate > 2){
+    #Get available chrome drivers binman::list_versions("chromedriver")
+    
+    getFangraphDataDownload(download_location,fangraphFile,hitterURL,hitterFile)
+    getFangraphDataDownload(download_location,fangraphFile,pitcherURL,pitcherFile)
+  }
+  
+}
+
+getFangraphDataDownload <- function(download_location,fangraphFile,dataURL,dataFile){
+  
+  driver <- rsDriver(browser=c("chrome"), chromever="83.0.4103.39", port = 4444L)
+  remote_driver <- driver[["client"]] #remote_driver$open()
+  remote_driver$navigate(dataURL)
+  
+  Sys.sleep(2)
+  exportData_Link <- remote_driver$findElement(using = 'id', value = 'ProjectionBoard1_cmdCSV')
+  exportData_Link$clickElement()
+  
+  Sys.sleep(2)
+  
+  latestFile <- gLatestFile(download_location,fangraphFile)
+  file.copy(file.path(download_location, latestFile), dataFile, overwrite = TRUE)
+  
+  Sys.sleep(1)
+  
+  remote_driver$close()
+  driver$server$stop()
+  system("taskkill /im java.exe /f", intern=FALSE, ignore.stdout=FALSE)
+  
 }
 
 loadData <- function(filename){
