@@ -227,6 +227,7 @@ forecastDraft_Restrict <- function(draftResults,rF,dFF,dPlayers,dPos,dPicksLeft)
     }
     if(draftResults[rF,'Pick'] == "") {
       dRestrict <- character()
+      dRestrict <- c(dRestrict,"Util")
       if(length(grep("C",dPos)) >= dPickMin + 1) dRestrict <- c(dRestrict,"C")
       if(length(grep("1B",dPos)) >= dPickMin + 1) dRestrict <- c(dRestrict,"1B")
       if(length(grep("2B",dPos)) >= dPickMin + 1) dRestrict <- c(dRestrict,"2B")
@@ -236,7 +237,11 @@ forecastDraft_Restrict <- function(draftResults,rF,dFF,dPlayers,dPos,dPicksLeft)
       if(length(grep("RP",dPos)) >= dPickMin + 2) dRestrict <- c(dRestrict,"RP")
       if(length(grep("OF",dPos)) >= dPickMin + 3) dRestrict <- c(dRestrict,"OF")
       
-      if(length(dRestrict) > 0) draftResults[rF,'Pick'] <- head(dFF[!grepl(paste(dRestrict,collapse = "|"),dFF$pos),'pId'],1)
+      if(length(dRestrict) > 0){
+        if(any(!grepl(paste(dRestrict,collapse = "|"),dFF$pos))){
+          draftResults[rF,'Pick'] <- head(dFF[!grepl(paste(dRestrict,collapse = "|"),dFF$pos),'pId'],1)
+        }
+      } 
     }
   }
   if(draftResults[rF,'Pick'] == "") draftResults[rF,'Pick'] <- head(dFF$pId,1)
