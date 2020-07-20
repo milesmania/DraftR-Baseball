@@ -2,6 +2,7 @@ source("Assets/LoadPackages.R")
 source("Assets/DraftFunctions.R")
 source("Assets/DraftDataLoad.R")
 source("Assets/DraftConfig.R")
+source("Assets/DraftPlayerSetup.R")
 
 draftFile <- "Data/FFDraftData.RData"
 
