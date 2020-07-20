@@ -140,7 +140,7 @@ setConfigTxt <- function(configFile="Assets/config.txt"){
 ## User Functions ###########################################
 
 #dForcast <- forecastDraft(draftResults,ff); dRosters <- setRoster(draftedPlayers=dForcast)
-forecastDraft <- function(draftResults,ff){
+forecastDraft <- function(draftResults,ff,MyTeam=NULL){
   draftResults$Selected <- ifelse(draftResults$Pick!="","selected","forecast")
   rForecast <- draftResults$Selected!="selected"
   dFF <- ff[!(ff$pId %in% draftResults[!rForecast,'Pick']),]
@@ -150,31 +150,7 @@ forecastDraft <- function(draftResults,ff){
       dPlayers <- subset(draftResults,Pick!="" & Team == dTeam,Pick)
       dPos <- sapply(strsplit(dPlayers$Pick, split='|', fixed=TRUE), `[`, 3)
       if(nrow(dPlayers) > 0){
-        #Enforce position caps
-        if(length(grep("OF",dPos)) >= 2){
-          if(length(grep("P",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("P",dFF$pos),'pId'],1)}
-          else if(length(grep("B",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("B",dFF$pos),'pId'],1)}
-          else if(length(grep("C",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("C",dFF$pos),'pId'],1)}
-          else if(length(grep("RP",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("RP",dFF$pos),'pId'],1)}
-          else if(length(grep("SP",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("SP",dFF$pos),'pId'],1)}
-          else if(length(grep("1B",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("1B",dFF$pos),'pId'],1)}
-          else if(length(grep("2B",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("2B",dFF$pos),'pId'],1)}
-          else if(length(grep("3B",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("3B",dFF$pos),'pId'],1)}
-          else if(length(grep("SS",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("SS",dFF$pos),'pId'],1)}
-        }
-        if(draftResults[rF,'Pick'] == "") {
-          dRestrict <- character()
-          if(length(grep("C",dPos)) >= 2) dRestrict <- c(dRestrict,"C")
-          if(length(grep("1B",dPos)) >= 2) dRestrict <- c(dRestrict,"1B")
-          if(length(grep("2B",dPos)) >= 2) dRestrict <- c(dRestrict,"2B")
-          if(length(grep("3B",dPos)) >= 2) dRestrict <- c(dRestrict,"3B")
-          if(length(grep("SS",dPos)) >= 2) dRestrict <- c(dRestrict,"SS")
-          if(length(grep("SP",dPos)) >= 3) dRestrict <- c(dRestrict,"SP")
-          if(length(grep("RP",dPos)) >= 3) dRestrict <- c(dRestrict,"RP")
-          if(length(grep("OF",dPos)) >= 4) dRestrict <- c(dRestrict,"OF")
-          
-          if(length(dRestrict) > 0) draftResults[rF,'Pick'] <- head(dFF[!grepl(paste(dRestrict,collapse = "|"),dFF$pos),'pId'],1)
-        }
+        dFF <- forecastDraft_Restrict(draftResults,dFF,dPlayers)
       }
       if(draftResults[rF,'Pick'] == "") draftResults[rF,'Pick'] <- head(dFF$pId,1)
       dFF <- dFF[dFF$pId != draftResults[rF,'Pick'], ]
@@ -185,6 +161,39 @@ forecastDraft <- function(draftResults,ff){
   draftResults <- draftResults[,c(2:4,1,5:ncol(draftResults))]
   draftResults <- draftResults[order(draftResults$Overall),]
   return(draftResults)
+}
+
+forecastDraft_Restrict <- function(draftResults,dFF,dPlayers){
+  if(nrow(dPlayers) > 0){
+    #Enforce position caps
+    if(length(grep("OF",dPos)) >= 2){
+      if(length(grep("P",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("P",dFF$pos),'pId'],1)}
+      else if(length(grep("B",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("B",dFF$pos),'pId'],1)}
+      else if(length(grep("C",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("C",dFF$pos),'pId'],1)}
+      else if(length(grep("RP",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("RP",dFF$pos),'pId'],1)}
+      else if(length(grep("SP",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("SP",dFF$pos),'pId'],1)}
+      else if(length(grep("1B",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("1B",dFF$pos),'pId'],1)}
+      else if(length(grep("2B",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("2B",dFF$pos),'pId'],1)}
+      else if(length(grep("3B",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("3B",dFF$pos),'pId'],1)}
+      else if(length(grep("SS",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("SS",dFF$pos),'pId'],1)}
+    }
+    if(draftResults[rF,'Pick'] == "") {
+      dRestrict <- character()
+      if(length(grep("C",dPos)) >= 2) dRestrict <- c(dRestrict,"C")
+      if(length(grep("1B",dPos)) >= 2) dRestrict <- c(dRestrict,"1B")
+      if(length(grep("2B",dPos)) >= 2) dRestrict <- c(dRestrict,"2B")
+      if(length(grep("3B",dPos)) >= 2) dRestrict <- c(dRestrict,"3B")
+      if(length(grep("SS",dPos)) >= 2) dRestrict <- c(dRestrict,"SS")
+      if(length(grep("SP",dPos)) >= 3) dRestrict <- c(dRestrict,"SP")
+      if(length(grep("RP",dPos)) >= 3) dRestrict <- c(dRestrict,"RP")
+      if(length(grep("OF",dPos)) >= 4) dRestrict <- c(dRestrict,"OF")
+      
+      if(length(dRestrict) > 0) draftResults[rF,'Pick'] <- head(dFF[!grepl(paste(dRestrict,collapse = "|"),dFF$pos),'pId'],1)
+    }
+  }
+  if(draftResults[rF,'Pick'] == "") draftResults[rF,'Pick'] <- head(dFF$pId,1)
+  dFF <- dFF[dFF$pId != draftResults[rF,'Pick'], ]
+  return(dFF)
 }
 
 draftChart <- function(dForcast){#dForcast=draftForecast
@@ -283,7 +292,9 @@ rotoTable_Total <- function(draftForecast, hitters, pitchers, hitterStats, pitch
   
   return(pTotal)
 }
-
+#draftForecast <- forecastDraft(draftResults,ff)
+#rotoAll <- rotoTable_Total(draftForecast, hitters, pitchers, hitterStats, pitcherStats)
+#rotoTable_Rank(rotoAll, pStats = c(hitterStats,pitcherStats))
 rotoTable_Rank <- function(pTotal, pStats, pAvg = c('AVG','OBP','SLG','ERA','WHIP','K.9'), pDesc = c('SO','ERA','WHIP')){
   pRank <- pTotal; pRank[,2:ncol(pRank)] <- 0.0;
   
