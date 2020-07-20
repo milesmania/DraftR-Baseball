@@ -65,7 +65,18 @@ shinyServer(function(input, output, session) {
   players <- merge(players,master1,by.x='playerid',by.y='fg_id')
   players <- players[order(players$ADP),]
   
-  ff <- players[,c('playerid','Name','mlb_team','ottoneu_pos','WAR','ADP','points','bats','throws','age')]
+  players <- players %>% left_join(fantraxPlayerData, by = c("mlb_name" = "Player", "mlb_team" = "Team"), suffix = c("",".Fantrax"))
+  
+  players$fantrax_pos <- sapply(1:nrow(players), function(x){
+    if(!is.na(players[x,"Position"])){
+      pos <- gsub(",","/",players[x,"Position"])
+    }else{
+      pos <- players[x,"ottoneu_pos"]
+    }
+    pos
+  })
+  
+  ff <- players[,c('playerid','Name','mlb_team','fantrax_pos','WAR','ADP','points','bats','throws','age')]
   ff_anyDups <- which(duplicated(ff$playerid))
   if(length(ff_anyDups>0)){
     ff_checkDups <- ff[ff_anyDups,"playerid"]

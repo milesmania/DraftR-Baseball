@@ -58,6 +58,52 @@ getFantraxDraftData <- function(userName,passWord,leagueId,fantraxDraftFile,down
   draftData <- read.csv(paste0("Data/",fantraxDraftFile,".csv"), stringsAsFactors = FALSE)
   return(draftData)
 }
+#getFantraxPlayerData(userName,passWord,leagueId,fantraxPlayerFile,download_location)
+getFantraxPlayerData <- function(userName,passWord,leagueId,fantraxPlayerFile,download_location){
+  #leagueId='nc30j3mnjsuzwnaa' #leagueId='1tpc1071kbu8rp1e'
+  #loginUrl <- paste0("https://www.fantrax.com/login?showSignup=false&url=%2Fnewui%2Ffantasy%2FdraftResultsPopup.go%3FleagueId%3D",leagueId,"%26sxq_w%3D2")
+  loginUrl <- paste0("https://www.fantrax.com/login")
+  #https://www.fantrax.com/fxpa/downloadPlayerStats?leagueId=1tpc1071kbu8rp1e&pageNumber=1&view=STATS&positionOrGroup=ALL&seasonOrProjection=PROJECTION_0_135_SEASON&timeframeTypeCode=YEAR_TO_DATE&transactionPeriod=1&miscDisplayType=1&sortType=SCORE&maxResultsPerPage=20&statusOrTeamFilter=ALL&scoringCategoryType=5&timeStartType=PERIOD_ONLY&schedulePageAdj=0&searchName=&startDate=2020-07-23&endDate=2020-09-28&teamId=ei8euvnpkbu8rp1z&
+  webUrl <- paste0("https://www.fantrax.com/fxpa/downloadPlayerStats?leagueId=",leagueId,"&view=STATS&positionOrGroup=ALL&seasonOrProjection=PROJECTION_0_135_SEASON&timeframeTypeCode=YEAR_TO_DATE&transactionPeriod=1&miscDisplayType=1&sortType=SCORE&statusOrTeamFilter=ALL&scoringCategoryType=5&timeStartType=PERIOD_ONLY")
+  
+  download_location <- file.path(Sys.getenv("USERPROFILE"), "Downloads")
+  #Get available chrome drivers binman::list_versions("chromedriver")
+  driver <- rsDriver(browser=c("chrome"), chromever="83.0.4103.39", port = 4444L)
+  
+  remote_driver <- driver[["client"]] #remote_driver$open()
+  
+  remote_driver$navigate(loginUrl)
+  
+  Sys.sleep(2)
+  
+  textfield_Username <- remote_driver$findElement(using = 'id', value = 'mat-input-0')
+  textfield_PW <- remote_driver$findElement(using = 'id', value = 'mat-input-1')
+  login_button <- remote_driver$findElement(using = 'class', value = 'mat-primary')
+  
+  textfield_Username$sendKeysToElement(list(userName))
+  textfield_PW$sendKeysToElement(list(passWord, key = 'enter'))
+  #login_button$clickElement()
+  
+  Sys.sleep(2)
+  
+  remote_driver$navigate(webUrl)
+  
+  Sys.sleep(2)
+  
+  # downloadCSV <- remote_driver$findElement(using = 'class', value = 'defaultLink')
+  # downloadCSV$clickElement()
+  
+  latestFile <- gLatestFile(download_location,fantraxPlayerFile)
+  
+  file.copy(file.path(download_location, latestFile), paste0("Data/",fantraxPlayerFile,".csv"), overwrite = TRUE)
+  
+  remote_driver$close()
+  driver$server$stop()
+  system("taskkill /im java.exe /f", intern=FALSE, ignore.stdout=FALSE)
+  
+  playerData <- read.csv(paste0("Data/",fantraxPlayerFile,".csv"), stringsAsFactors = FALSE)
+  return(playerData)
+}
 
 getFangraphData <- function(download_location){
   hitterURL <- "https://www.fangraphs.com/projections.aspx?pos=all&stats=bat&type=fangraphsdc&team=0&lg=all&players=0"
@@ -68,7 +114,7 @@ getFangraphData <- function(download_location){
   fangraphFile <- "FanGraphs Leaderboard"
   
   hitterFile.ModifiedDate <- as.Date(file.info(hitterFile)$mtime)
-  if(Sys.Date()-hitterFile.ModifiedDate > 2){
+  if(Sys.Date()-hitterFile.ModifiedDate > 0){
     #Get available chrome drivers binman::list_versions("chromedriver")
     
     getFangraphDataDownload(download_location,fangraphFile,hitterURL,hitterFile)
@@ -140,17 +186,18 @@ setConfigTxt <- function(configFile="Assets/config.txt"){
 ## User Functions ###########################################
 
 #dForcast <- forecastDraft(draftResults,ff); dRosters <- setRoster(draftedPlayers=dForcast)
-forecastDraft <- function(draftResults,ff,MyTeam=NULL){
+forecastDraft <- function(draftResults,ff){
   draftResults$Selected <- ifelse(draftResults$Pick!="","selected","forecast")
   rForecast <- draftResults$Selected!="selected"
   dFF <- ff[!(ff$pId %in% draftResults[!rForecast,'Pick']),]
   if(any(rForecast)){
-    for(rF in draftResults[rForecast,'Overall']){#rF=106
+    for(rF in draftResults[rForecast,'Overall']){#rF=41
       dTeam <- draftResults[rF,'Team']
       dPlayers <- subset(draftResults,Pick!="" & Team == dTeam,Pick)
-      dPos <- sapply(strsplit(dPlayers$Pick, split='|', fixed=TRUE), `[`, 3)
+      dPicksLeft <- subset(draftResults,Pick=="" & Team == dTeam,Pick)
       if(nrow(dPlayers) > 0){
-        dFF <- forecastDraft_Restrict(draftResults,dFF,dPlayers)
+        dPos <- sapply(strsplit(dPlayers$Pick, split='|', fixed=TRUE), `[`, 3)
+        draftResults <- forecastDraft_Restrict(draftResults,rF,dFF,dPlayers,dPos,dPicksLeft)
       }
       if(draftResults[rF,'Pick'] == "") draftResults[rF,'Pick'] <- head(dFF$pId,1)
       dFF <- dFF[dFF$pId != draftResults[rF,'Pick'], ]
@@ -163,10 +210,11 @@ forecastDraft <- function(draftResults,ff,MyTeam=NULL){
   return(draftResults)
 }
 
-forecastDraft_Restrict <- function(draftResults,dFF,dPlayers){
+forecastDraft_Restrict <- function(draftResults,rF,dFF,dPlayers,dPos,dPicksLeft){
   if(nrow(dPlayers) > 0){
     #Enforce position caps
-    if(length(grep("OF",dPos)) >= 2){
+    dPickMin <- ifelse(nrow(dPicksLeft)>5,0,1)
+    if(length(grep("OF",dPos)) >= dPickMin + 2){
       if(length(grep("P",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("P",dFF$pos),'pId'],1)}
       else if(length(grep("B",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("B",dFF$pos),'pId'],1)}
       else if(length(grep("C",dPos)) == 0){draftResults[rF,'Pick'] <- head(dFF[grep("C",dFF$pos),'pId'],1)}
@@ -179,21 +227,20 @@ forecastDraft_Restrict <- function(draftResults,dFF,dPlayers){
     }
     if(draftResults[rF,'Pick'] == "") {
       dRestrict <- character()
-      if(length(grep("C",dPos)) >= 2) dRestrict <- c(dRestrict,"C")
-      if(length(grep("1B",dPos)) >= 2) dRestrict <- c(dRestrict,"1B")
-      if(length(grep("2B",dPos)) >= 2) dRestrict <- c(dRestrict,"2B")
-      if(length(grep("3B",dPos)) >= 2) dRestrict <- c(dRestrict,"3B")
-      if(length(grep("SS",dPos)) >= 2) dRestrict <- c(dRestrict,"SS")
-      if(length(grep("SP",dPos)) >= 3) dRestrict <- c(dRestrict,"SP")
-      if(length(grep("RP",dPos)) >= 3) dRestrict <- c(dRestrict,"RP")
-      if(length(grep("OF",dPos)) >= 4) dRestrict <- c(dRestrict,"OF")
+      if(length(grep("C",dPos)) >= dPickMin + 1) dRestrict <- c(dRestrict,"C")
+      if(length(grep("1B",dPos)) >= dPickMin + 1) dRestrict <- c(dRestrict,"1B")
+      if(length(grep("2B",dPos)) >= dPickMin + 1) dRestrict <- c(dRestrict,"2B")
+      if(length(grep("3B",dPos)) >= dPickMin + 1) dRestrict <- c(dRestrict,"3B")
+      if(length(grep("SS",dPos)) >= dPickMin + 1) dRestrict <- c(dRestrict,"SS")
+      if(length(grep("SP",dPos)) >= dPickMin + 2) dRestrict <- c(dRestrict,"SP")
+      if(length(grep("RP",dPos)) >= dPickMin + 2) dRestrict <- c(dRestrict,"RP")
+      if(length(grep("OF",dPos)) >= dPickMin + 3) dRestrict <- c(dRestrict,"OF")
       
       if(length(dRestrict) > 0) draftResults[rF,'Pick'] <- head(dFF[!grepl(paste(dRestrict,collapse = "|"),dFF$pos),'pId'],1)
     }
   }
   if(draftResults[rF,'Pick'] == "") draftResults[rF,'Pick'] <- head(dFF$pId,1)
-  dFF <- dFF[dFF$pId != draftResults[rF,'Pick'], ]
-  return(dFF)
+  return(draftResults)
 }
 
 draftChart <- function(dForcast){#dForcast=draftForecast
@@ -221,6 +268,7 @@ setRoster <- function(draftedPlayers,showForecast=TRUE,
   teams <- unique(draftedPlayers$Team)
   rosters <- data.frame(matrix("",length(rosterPositions),length(teams)), stringsAsFactors = F)
   colnames(rosters) <- teams; rownames(rosters) <- rosterPositions; #rosters[,] <- ""
+  benchSpots <- rosterPositions[grepl("BE-",rosterPositions)]
   
   if(!showForecast) draftedPlayers <- subset(draftedPlayers,Selected == "selected")
   for(t in 1:length(teams)){#t=1
@@ -233,8 +281,15 @@ setRoster <- function(draftedPlayers,showForecast=TRUE,
         tPosP <- ifelse(grepl('P',tPos),paste0(tPos,"|^P"),tPos)
         newPlayer <- paste0(teamPlayers[tP,c('name','pos','team')], collapse = "|")
         if(teamPlayers[tP,"Selected"]=="forecast") newPlayer <- paste0("(",newPlayer,")")
-        if(!(newPlayer %in% rosters[,teams[t]]) & any(rosters[grepl(tPosP,rownames(rosters)),teams[t]]=="") ){
+        if(any(rosters[grepl(tPosP,rownames(rosters)),teams[t]]=="")){
           availSlots <- rownames(rosters)[grepl(tPosP,rownames(rosters)) & rosters[,teams[t]] == ""]
+        }else{
+          rosters[nrow(rosters)+1,] <- rep("",ncol(rosters))
+          availSlots <- paste0("BE-",length(benchSpots)+1)
+          benchSpots <- c(benchSpots,availSlots)
+          rownames(rosters)[nrow(rosters)] <- availSlots
+        }
+        if(!(newPlayer %in% rosters[,teams[t]])){
           rosters[availSlots[1],teams[t]] <- newPlayer
           teamDrafted <- c(teamDrafted, newPlayer)
         }
