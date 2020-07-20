@@ -275,7 +275,10 @@ shinyServer(function(input, output, session) {
   })
   
   output$dataAvailHitters = DT::renderDataTable({
-    datatable(values$availHitters, rownames = FALSE, 
+    aHitters <- values$availHitters
+    aHitters <- aHitters[order(aHitters$ADP),]
+    rownames(aHitters) <- NULL
+    datatable(aHitters, 
               options = list(lengthMenu = c(100, 50, 25, 10), pageLength = 10, order=list(which(colnames(hitters)=='ADP'),'asc'))) %>%
       formatStyle("pos",target = 'row',
                   backgroundColor = styleEqual(levels=c("2B","3B","OF","C","1B","SS"),
@@ -284,7 +287,7 @@ shinyServer(function(input, output, session) {
   })
   
   output$dataAvailPitchers = DT::renderDataTable({
-    datatable(values$availPitchers, rownames = FALSE, 
+    datatable(values$availPitchers,  
               options = list(lengthMenu = c(100, 50, 25, 10), pageLength = 10, order=list(which(colnames(pitchers)=='ADP'),'asc'))) %>%
       formatStyle("pos",target = 'row',
                   backgroundColor = styleEqual(levels=c("SP","RP","SP/RP"),
