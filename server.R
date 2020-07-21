@@ -177,7 +177,7 @@ shinyServer(function(input, output, session) {
     })
   
   output$dataAvailALL = DT::renderDataTable({
-    datatable(values$dataAvail, rownames = FALSE, options = list(lengthMenu = c(100, 50, 25, 10), pageLength = 25)) %>%
+    datatable(values$dataAvail, rownames = FALSE, options = list(lengthMenu = c(200, 100, 50, 25), pageLength = 50)) %>%
       formatStyle("pos",target = 'row',
                   backgroundColor = styleEqual(levels=c("SP","RP","OF","C","1B","SS"),
                                                values=c("pink","lightgreen","lightblue","orange","violet","lightgrey")))
@@ -189,7 +189,7 @@ shinyServer(function(input, output, session) {
     aHitters <- aHitters[order(aHitters$ADP),]
     rownames(aHitters) <- NULL
     datatable(aHitters, 
-              options = list(lengthMenu = c(100, 50, 25, 10), pageLength = 10, order=list(which(colnames(hitters)=='ADP'),'asc'))) %>%
+              options = list(lengthMenu = c(200, 100, 50, 25), pageLength = 50, order=list(which(colnames(hitters)=='points'),'dsc'))) %>%
       formatStyle("pos",target = 'row',
                   backgroundColor = styleEqual(levels=c("2B","3B","OF","C","1B","SS"),
                                                values=c("pink","lightgreen","lightblue","orange","violet","lightgrey")))
@@ -198,7 +198,7 @@ shinyServer(function(input, output, session) {
   
   output$dataAvailPitchers = DT::renderDataTable({
     datatable(values$availPitchers,  
-              options = list(lengthMenu = c(100, 50, 25, 10), pageLength = 10, order=list(which(colnames(pitchers)=='ADP'),'asc'))) %>%
+              options = list(lengthMenu = c(200, 100, 50, 25), pageLength = 50, order=list(which(colnames(pitchers)=='points'),'dsc'))) %>%
       formatStyle("pos",target = 'row',
                   backgroundColor = styleEqual(levels=c("SP","RP","SP/RP"),
                                                values=c("pink","lightblue","lightgrey")))
@@ -207,6 +207,37 @@ shinyServer(function(input, output, session) {
   
   
   output$rosterData = renderTable({values$rosterData}, rownames = TRUE, striped = TRUE, width = "100%")
+  
+  output$rosterHitters = DT::renderDataTable({
+    draftForecast <- values$dForecast %>% filter(Team == input$forecastTeam)
+    rosterHitters <- draftForecast[,c("Team","Pick","pos","Overall","Round","points")] %>% 
+      inner_join(hitters[,c("pId",hitterStats)], by = c("Pick" = "pId"))
+    rosterHitters <- rosterHitters[order(rosterHitters$Team,rosterHitters$Overall),]
+    datatable(rosterHitters, 
+              options = list(lengthMenu = c(200, 100, 25, 10), pageLength = 200)) %>%
+      formatStyle("pos",target = 'row',
+                  backgroundColor = styleEqual(levels=c("2B","3B","OF","C","1B","SS"),
+                                               values=c("pink","lightgreen","lightblue","orange","violet","lightgrey")))
+    #%>% formatRound(columns = colnames(values$dataAvail)[8:35])
+  })
+  
+  output$rosterPitchers = DT::renderDataTable({
+    draftForecast <- values$dForecast %>% filter(Team == input$forecastTeam)
+    rosterPitchers <- draftForecast[,c("Team","Pick","pos","Overall","Round","points")] %>% 
+      inner_join(pitchers[,c("pId",pitcherStats)], by = c("Pick" = "pId"))
+    rosterPitchers <- rosterPitchers[order(rosterPitchers$Team,rosterPitchers$Overall),]
+    datatable(rosterPitchers, 
+              options = list(lengthMenu = c(200, 100, 25, 10), pageLength = 200)) %>%
+      formatStyle("pos",target = 'row',
+                  backgroundColor = styleEqual(levels=c("SP","RP","SP/RP"),
+                                               values=c("pink","lightblue","lightgrey")))
+    #%>% formatRound(columns = colnames(values$dataAvail)[8:35])
+  })
+  
+  output$mockPicks = function(){
+    forecastMockScoreKable(values$dResult, ff = values$dataAvail, hitters, pitchers, hitterStats, 
+                      pitcherStats,nPlayers=input$forecastPicks,fTeam=input$forecastTeam)
+    }
   
   output$rotoRank = DT::renderDataTable({values$rotoRank}, options = list(paging = FALSE, searching = FALSE, pageLength = 'All', order=list(2,'desc')))
   output$rotoTotal = DT::renderDataTable({values$rotoTotal}, options = list(paging = FALSE, searching = FALSE, pageLength = 'All', order=list(2,'desc')))

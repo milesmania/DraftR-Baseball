@@ -1,12 +1,15 @@
-qProbs <- c(0,.4,.6,.8,.9,.95,.98,1)
-
 hitterStats <- c('HR','RBI','SB','AVG','R','SO','OBP','SLG'); hDesc <- c('SO')
 n <- nrow(hitters)
-for(i in 1:length(hitterStats)){#i=7
+for(i in 1:length(hitterStats)){#i=7#i=6
   s <- hitterStats[i]
-  
-  qBreaks <- quantile(hitters[,s], probs=qProbs)
-  qLabels <- c('0','1','3','5','7','9','10')
+  if(s %in% hDesc){
+    qProbs <- c(0.005,0.01,.02,.05,.3,.5,.6,.7,.8,.9,1)
+    qLabels <- c('10','9','8','7','6','5','4','3','2','0')
+  }else{
+    qProbs <- c(0,.2,.3,.4,.5,.6,.7,.8,.9,.95,.98,1)
+    qLabels <- c('0','1','2','3','4','5','6','7','8','9','10')
+  }
+  qBreaks <- quantile(hitters[hitters[,s]!=0,s], probs=qProbs)
   
   if(length(qBreaks)>length(unique(qBreaks))){
     nQ <- c(1)
@@ -17,10 +20,6 @@ for(i in 1:length(hitterStats)){#i=7
     qLabels <- qLabels[nQ-1]
   }
   
-  if(s %in% hDesc){
-    #hitters[,paste0("R_",s)] <- (1-rank(hitters[,s])/n)*10
-    qLabels <- qLabels[length(qLabels):1]
-  }
   hitters[,paste0("R_",s)] <- cut(x=hitters[,s], breaks = qBreaks, labels=qLabels)
   hitters[,paste0("R_",s)] <- as.numeric(as.character(hitters[,paste0("R_",s)]))
 }
@@ -30,11 +29,16 @@ pitcherStats <- c('W','ERA','WHIP','SVHD','K.9'); pDesc <- c('ERA','WHIP')
 pitchers$SVHD <- pitchers$SV + pitchers$HLD
 
 n <- nrow(pitchers)
-for(i in 1:length(pitcherStats)){#i=1
+for(i in 1:length(pitcherStats)){#i=3
   s <- pitcherStats[i]
-  
-  qBreaks <- quantile(pitchers[,s], probs=qProbs)
-  qLabels <- c('0','1','3','5','7','9','10')
+  if(s %in% pDesc){
+    qProbs <- c(0.005,0.01,.02,.05,.3,.5,.6,.7,.8,.9,1)
+    qLabels <- c('10','9','8','7','6','5','4','3','2','0')
+  }else{
+    qProbs <- c(0,.2,.3,.4,.5,.6,.7,.8,.9,.95,.98,1)
+    qLabels <- c('0','1','2','3','4','5','6','7','8','9','10')
+  }
+  qBreaks <- quantile(pitchers[pitchers[,s]!=0,s], probs=qProbs)
   
   if(length(qBreaks)>length(unique(qBreaks))){
     nQ <- c(1)
@@ -43,10 +47,6 @@ for(i in 1:length(pitcherStats)){#i=1
     }
     qBreaks <- qBreaks[nQ]
     qLabels <- qLabels[nQ-1]
-  }
-  
-  if(s %in% pDesc){
-    qLabels <- qLabels[length(qLabels):1]
   }
   pitchers[,paste0("R_",s)] <- cut(x=pitchers[,s], breaks = qBreaks, labels=qLabels)
   pitchers[,paste0("R_",s)] <- as.numeric(as.character(pitchers[,paste0("R_",s)]))

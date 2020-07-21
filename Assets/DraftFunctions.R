@@ -247,6 +247,57 @@ forecastDraft_Restrict <- function(draftResults,rF,dFF,dPlayers,dPos,dPicksLeft)
   if(draftResults[rF,'Pick'] == "") draftResults[rF,'Pick'] <- head(dFF$pId,1)
   return(draftResults)
 }
+#forecastMockScore(draftResults,ff, hitters, pitchers, hitterStats, pitcherStats, fTeam=MyTeam)
+forecastMockScore <- function(draftResults,ff, hitters, pitchers, hitterStats, pitcherStats,nPlayers=10,fTeam=NA){
+  draftResults$Selected <- ifelse(draftResults$Pick!="","selected","forecast")
+  rForecast <- draftResults$Selected!="selected"
+  dFF_left <- ff[!(ff$pId %in% draftResults[!rForecast,'Pick']),]
+  if(is.na(fTeam) || fTeam == "Next Pick"){
+    fTeam <- head(draftResults[rForecast,'Team'],1) #Get next pick
+  }
+  myNextPick <- head(draftResults[rForecast & draftResults$Team == fTeam,'Overall'],1)
+  nextPlayers <- head(dFF_left,nPlayers)
+  nextDraftScore <- data.frame(Player=nextPlayers$pId,Score=rep(NA,nrow(nextPlayers)),
+                               Rank=rep(NA,nrow(nextPlayers)), stringsAsFactors = F)
+  allTeams <- unique(draftResults$Team)
+  for(aT in 1:length(allTeams)){
+    nextDraftScore[,allTeams[aT]] <- NA
+  }
+  for(nP in 1:nrow(nextPlayers)){#nP=1
+    mockResults <- draftResults
+    mockResults[myNextPick,'Pick'] <- nextPlayers[nP,'pId']
+    mockForecast <- forecastDraft(mockResults,dFF_left)
+    mockALL <- rotoTable_Total(mockForecast, hitters, pitchers, hitterStats, pitcherStats)
+    if(nrow(mockALL)>0){
+      mockRank <- rotoTable_Rank(pTotal = mockALL, pStats = c(hitterStats, pitcherStats))
+      nextDraftScore[nP,'Score'] <- mockRank[mockRank$Team == fTeam, 'Total']
+      nextDraftScore[nP,'Rank'] <- which(mockRank$Team == fTeam)
+      for(aT in 1:length(allTeams)){
+        nextDraftScore[nP,allTeams[aT]] <- mockRank[mockRank$Team == allTeams[aT], 'Total']
+      }
+    }
+  }
+  return(nextDraftScore)
+}
+
+forecastMockScoreKable <- function(draftResults,ff, hitters, pitchers, hitterStats, pitcherStats,nPlayers=10,fTeam=NA){
+  nextDraftScore <- forecastMockScore(draftResults,ff, hitters, pitchers, hitterStats, pitcherStats,nPlayers,fTeam)
+  nextDraftScore[4:ncol(nextDraftScore)] <- nextDraftScore[4:ncol(nextDraftScore)] %>% 
+    mutate_if(is.numeric, function(x) {
+      cell_spec(x, bold = T, 
+                color = spec_color(x, begin = 0.1, end = 0.9),
+                font_size = spec_font_size(x))
+    }) 
+  
+  nextDraftScore <- nextDraftScore %>% mutate(Rank = cell_spec(
+    Rank, color = "white", bold = T,
+    background = spec_color(Rank, begin = 0.1, end = 0.9, option = "A")
+  ))
+  
+  nextDraftScore <- nextDraftScore %>% kable(escape = F, align = "c") %>%
+    kable_styling(c("striped", "condensed"), full_width = F)
+  return(nextDraftScore)
+}
 
 draftChart <- function(dForcast){#dForcast=draftForecast
   draftPoints <- dForcast %>%
@@ -336,11 +387,13 @@ rotoTable_Total <- function(draftForecast, hitters, pitchers, hitterStats, pitch
   hPlayers <- merge(draftForecast,hitters,by=c("id","pos","WAR","ADP","points"))
   pPlayers <- merge(draftForecast,pitchers,by=c("id","pos","WAR","ADP","points"))
   
-  hTotal <- hPlayers %>% group_by(Team.x) %>% summarize_at(funs(sum, mean), .vars=hitterStats)
+  hTotal <- hPlayers %>% group_by(Team.x) %>% summarize_at(funs(sum, weighted.mean(.,w=AB)), .vars=hitterStats)
+  colnames(hTotal) <- gsub("weighted.mean","mean",colnames(hTotal))
   hTotal <- as.data.frame(hTotal[,c('Team.x',sapply(hitterStats,function(x) paste0(x,"_",ifelse(x %in% hAvg, "mean", "sum")) ))])
   colnames(hTotal) <- c('Team',hitterStats)
   
-  pTotal <- pPlayers %>% group_by(Team.x) %>% summarize_at(funs(sum, mean), .vars=pitcherStats)
+  pTotal <- pPlayers %>% group_by(Team.x) %>% summarize_at(funs(sum, weighted.mean(.,w=IP)), .vars=pitcherStats)
+  colnames(pTotal) <- gsub("weighted.mean","mean",colnames(pTotal))
   pTotal <- as.data.frame(pTotal[,c('Team.x',sapply(pitcherStats,function(x) paste0(x,"_",ifelse(x %in% pAvg, "mean", "sum")) ))])
   colnames(pTotal) <- c('Team',pitcherStats)
   
